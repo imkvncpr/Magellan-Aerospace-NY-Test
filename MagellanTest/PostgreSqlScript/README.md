@@ -1,3 +1,5 @@
+CREATE DATABASE Parts;
+
 CREATE TABLE Item (
 id integer PRIMARY KEY,
 item_Name VARCHAR(50) NOT NULL,
@@ -22,6 +24,23 @@ CREATE OR REPLACE FUNCTION get_Total_Cost()
 RETURN DECIMAL
 AS
 $total_Cost$
+BEGIN
+	WITH RECURSIVE item_Database AS (
+		SELECT item_Name, cost
+		FROM Item
+		WHERE item_Name_ = item_Name
+		UNION ALL
+		SELECT i.item_Name, i.cost
+		FROM Item i
+		INNER JOIN item_Database iD ON i.parent_Item = iD.item_Name
+		WHERE i.parent_Item IS NOT NULL
+	)
+	SELECT INTO total_Cost SUM(cost) FROM item_Database;
+
+	RETURN total_Cost;
+END;
+$total_Cost$ LANGUAGE plpgsql;
+
 BEGIN
 	WITH RECURSIVE item_Database AS (
 		SELECT item_Name, cost
