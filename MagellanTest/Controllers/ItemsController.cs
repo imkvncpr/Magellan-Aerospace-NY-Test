@@ -63,11 +63,11 @@ namespace MagellanTest.Controllers
                 {
                     var item = new
                     {
-                        Id = reader.GetInt32(0),
-                        ItemName = reader.GetString(1),
-                        ParentItem = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        Id = reader.GetInt32(3),
+                        ItemName = reader.GetString(8),
+                        ParentItem = reader.IsDBNull(0) ? null : reader.GetString(2),
                         Cost = reader.GetDecimal(3),
-                        ReqDate = reader.GetDateTime(4)
+                        ReqDate = reader.GetDateTime(8)
                     };
                     return Ok(item);
                 }
