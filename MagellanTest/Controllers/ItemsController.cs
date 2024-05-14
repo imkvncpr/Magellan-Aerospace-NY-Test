@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using System;
-using System.Data;
-using Npgsql;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace MagellanTest.Controllers
 {
@@ -9,122 +10,100 @@ namespace MagellanTest.Controllers
     [Route("[controller]")]
     public class ItemsController : ControllerBase
     {
-        private readonly string _connectionstring;
-        private string? _connectionString;
+        private readonly ItemDbContext _dbContext;
 
-        public ItemsController()
+        public ItemsController(ItemDbContext dbContext)
         {
-            _connectionstring = "Postgresql Connection string";
-
+            _dbContext = dbContext;
         }
 
         [HttpPost]
-        public IActionResult CreateItem([FromBody] Item item)
+        public async Task<IActionResult> CreateItem(ItemDto itemDto)
         {
-            try
+            
+            var newItem = new Item
             {
-                using (var connection = new NpgsqlConnection(_connectionString))
-                {
-                    connection.Open();
+                ItemName = itemDto.ItemName,
+                ParentItem = itemDto.ParentItem,
+                Cost = itemDto.Cost,
+                ReqDate = itemDto.ReqDate
+            };
 
-                    using (var command = new NpgsqlCommand())
-                    {
-                        command.Connection = connection;
-                        command.CommandText = "INSERT INTO item (item_name, parent_item, cost, req_date) VALUES (@itemName, @parentItem, @cost, @reqDate) RETURNING id";
-                        command.Parameters.AddWithValue("itemName", item.ItemName);
-                        command.Parameters.AddWithValue("parentItem", item.ParentItem);
-                        command.Parameters.AddWithValue("cost", item.Cost);
-                        command.Parameters.AddWithValue("reqDate", item.ReqDate);
+            ((List<Item>)_dbContext.Items).Add(newItem);
+            await _dbContext.SaveChangesAsync();
 
-                        var id = (long)command.ExecuteScalar();
-
-                        return Ok(new { id });
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            // Return the id of the newly created record
+            return Ok(new { Id = newItem.Id });
         }
+
         [HttpGet("{id}")]
         public IActionResult GetItem(int id)
         {
-            try
+            // Query the item table by supplying the id of the record
+             // Add this using directive
+
+            var item = ((IEnumerable<Item>)_dbContext.Items).FirstOrDefault(i => (int)i.Id == id);
+
+            // Return the item details in json
+            var itemDto = new ItemDto
             {
-                using var connection = new NpgsqlConnection(_connectionString);
-                connection.Open();
+                Id = item.Id,
+                ItemName = item.ItemName,
+                ParentItem = item.ParentItem,
+                Cost = item.Cost,
+                ReqDate = item.ReqDate
+            };
 
-                using var cmd = new NpgsqlCommand("SELECT id, item_name, parent_item, cost, req_date FROM item WHERE id = @id", connection);
-                cmd.Parameters.AddWithValue("id", id);
+            return Ok(itemDto);
+        }
 
-                using var reader = cmd.ExecuteReader();
-                if (reader.Read())
-                {
-                    var item = new
-                    {
-                        Id = reader.GetInt32(3),
-                        ItemName = reader.GetString(8),
-                        ParentItem = reader.IsDBNull(0) ? null : reader.GetString(2),
-                        Cost = reader.GetDecimal(3),
-                        ReqDate = reader.GetDateTime(8)
-                    };
-                    return Ok(item);
-                }
-                else
-                {
-                    return NotFound();
-                }
-            }
-            catch (NpgsqlException ex)
-            {
-
-                return StatusCode(500, ex.Message);
-            }
-
+        private object IEnumerable<T>()
+        {
+            throw new NotImplementedException();
         }
 
         [HttpGet("total-cost")]
         public IActionResult GetTotalCost(string itemName)
         {
-            using (var connection = new NpgsqlConnection(_connectionString))
-            {
-                connection.Open();
+            // Call the Get_Total_Cost function with the supplied item_name
+            var totalCost = Get_Total_Cost(itemName);
 
-                using (var command = new NpgsqlCommand("Get_Total_Cost", connection))
-                {
-                    command.CommandType = CommandType.StoredProcedure;
-                    command.Parameters.AddWithValue("item_name", itemName);
+            // Return the value returned by the function
+            return Ok(new { TotalCost = totalCost });
+        }
 
-                    try
-                    {
-                        var result = command.ExecuteScalar();
-                        if (result != null && result != DBNull.Value)
-                        {
-                            return Ok(result); 
-                        }
-                        else
-                        {
-                            return NotFound(); 
-                        }
-                    }
-                    catch (NpgsqlException ex)
-                    {
-                        
-                        return StatusCode(500, $"Database error: {ex.Message}");
-                    }
-                }
-            }
+        private decimal Get_Total_Cost(string itemName)
+        {
+           
+            return 0; 
         }
     }
-    public class Item
+
+    internal class Item
     {
+        public object ItemName { get; internal set; }
+        public object ParentItem { get; internal set; }
+        public object Cost { get; internal set; }
+        public object ReqDate { get; internal set; }
+        public object Id { get; internal set; }
+    }
 
-        public string ItemName { get; set; }
-        public string ParentItem { get; set; }
-        public decimal Cost { get; set; }
-        public DateTime ReqDate { get; set; }
+    public class ItemDto
+    {
+        public object ReqDate { get; internal set; }
+        public object Cost { get; internal set; }
+        public object ParentItem { get; internal set; }
+        public object ItemName { get; internal set; }
+        public object Id { get; internal set; }
+    }
 
+    public class ItemDbContext
+    {
+        public object Items { get; internal set; }
 
+        internal async Task SaveChangesAsync()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
