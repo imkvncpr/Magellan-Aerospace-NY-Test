@@ -18,9 +18,9 @@ namespace MagellanTest.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateItem(ItemDto itemDto)
+        public IActionResult CreateItem(ItemDto itemDto)
         {
-            
+
             var newItem = new Item
             {
                 ItemName = itemDto.ItemName,
@@ -30,7 +30,7 @@ namespace MagellanTest.Controllers
             };
 
             ((List<Item>)_dbContext.Items).Add(newItem);
-            await _dbContext.SaveChangesAsync();
+            _dbContext.SaveChanges();
 
             // Return the id of the newly created record
             return Ok(new { Id = newItem.Id });
@@ -101,7 +101,7 @@ namespace MagellanTest.Controllers
     {
         public object Items { get; internal set; }
 
-        internal async Task SaveChangesAsync()
+        internal void SaveChanges()
         {
             throw new NotImplementedException();
         }
